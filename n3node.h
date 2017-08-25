@@ -6,107 +6,142 @@
 
 namespace magi {
 
-	template<class T, class C = int>
-	class N3node;
-	//enum Direction { LEFT = 1, MID, RIGHT };// <- not necessary i think
-	template<class T, class C = int>
-	class N3tree;
+    template<class T, class C = int>
+    class N3node;
+    template<class T, class C>
+    class N3tree;
 }
 
 template<class T, class C>
 class magi::N3node {
-	friend magi::N3tree<T, C>;
-	N3node() { this->setMid(true); this->setup(); }
-	void setDirection(const char & c);
-	void setNext( magi::N3node<T, C>*  n3n, const char &pos) { this->relations[pos + 2] = n3n; }
-	void setPar( magi::N3node<T, C> *  n3n) { this->relations[0] = n3n; }
-	void setIt(typename std::map<T, magi::N3node<T, C>*>::iterator* it) { this->itptr = it; }
-	bool isMid();
-	bool isEnd();
-	char getDirection();
-	std::vector<magi::N3node<T, C>*>getNext();
-	typename std::map<T, magi::N3node<T, C>*>::iterator* getIt() { return this->itptr; }
-	magi::N3node<T, C>* getPar() { return this->relations[0]; }
-
-	/*
-	* XXXXXX11 = -1 \
-	* XXXXXX00 = 0 - direction in relation to parent
-	* XXXXXX01 = 1 /
-	* XXXXX0XX = isMid-Flag
-	* 5 bits free !!!
-	*  maybe multithread support in next release...
-	*	- ( lock nodes?)
-	*/
-	unsigned char status;
-
-	/*
-	* parent @ 0
-	* // left, mid right @ 1 to @ 3 (only if isMid - flag = 1)
-	* // else @ 1 std::map<T,magi::N3node<T,C>*>::iterator *
-	*/
-	std::vector<magi::N3node<T,C>* >relations;// parent, left, mid, right
-	typename std::map<T, magi::N3node<T, C>*>::iterator* itptr;// != NULL if(this->isEnd())
-	void resetDirection();
-	void setMid(const bool & mid);
-	void setup();
+public:
+    friend magi::N3tree<T, C>;
+    N3node();
+    ~N3node();
+    void setDirection(const char & c);
+    void setNext(magi::N3node<T, C>*  n3n, const char &pos);
+    void setNext(const std::vector<magi::N3node<T, C> * > & vec);
+    void setPar(magi::N3node<T, C> *  n3n);
+    void setEnd();
+    void setMid();
+    void setTarget(typename std::map<T, magi::N3node<T, C>*>::iterator* it);
+    void resetDirection();
+    bool isMid()const;
+    bool isTarget()const;
+    char getDirection()const;
+    std::vector<magi::N3node<T, C>*>&getNext();
+    magi::N3node<T, C>*& getNext(const char & c);
+    typename std::map<T, magi::N3node<T, C>*>::iterator*& getIt();
+    magi::N3node<T, C>* & getPar();
+    /*
+    * XXXXXX11 = -1 \
+    * XXXXXX00 = 0 - direction in relation to parent
+    * XXXXXX01 = 1 /
+    * XXXXXX10 = no direction is set, throws exception if this->getDirection() is called
+    * XXXXX0XX = end-bit, 0 = isNext, 1 = isEnd default is 0
+    * 5 bits free !!!
+    */
+    magi::N3node<T, C>*parent;
+    unsigned char status;
+    typename std::map<T, magi::N3node<T, C>*>::iterator * target;
+    std::vector<magi::N3node<T, C>*>next;
 };
 
-template<class T, class C>
-std::vector<magi::N3node<T, C>*>magi::N3node<T, C>::getNext() {
-	std::vector<magi::N3node<T, C>*>res;
-	for (unsigned i = 1; i< this->relations.size(); ++i)
-		if (this->relations[i] != NULL)
-			res.push_back(this->relations[i]);
-	return res;
+template<class T,class C>
+magi::N3node<T,C>::~N3node() {
+    if (this->target != NULL)
+        delete this->target;
+}
+
+template<class T,class C>
+magi::N3node<T, C>*& magi::N3node<T, C>::getNext(const char & c) {
+    return this->next[c + 1];
+}
+
+template<class T,class C>
+std::vector<magi::N3node<T, C>*>& magi::N3node<T, C>::getNext() {
+    return this->next;
+}
+
+template<class T,class C>
+void magi::N3node<T, C>::setEnd() {
+    this->status |= 4;
+}
+
+template<class T,class C>
+void magi::N3node<T, C>::setMid() {
+    this->status &= 251;
+    this->next.resize(3);
 }
 
 template<class T, class C>
-void magi::N3node<T, C>::setMid(const bool &mid) {
-	unsigned char tmp = mid ? 4 : 0;
-	this->status |= tmp;
+void magi::N3node<T, C>::setTarget( typename std::map<T, magi::N3node<T, C>*>::iterator * it){
+    this->target = it;
+}
+
+template<class T,class C>
+magi::N3node<T, C>*& magi::N3node<T, C>::getPar() {
+    return this->parent;
+}
+
+template<class T,class C>
+bool magi::N3node<T, C>::isMid()const {
+    return (this->next.size() != 0);
+}
+
+template<class T,class C>
+bool magi::N3node<T, C>::isTarget()const {
+    return (this->next.size() == 0);
+}
+
+template<class T,class C>
+void magi::N3node<T, C>::setPar(magi::N3node<T, C>* n3n) {
+    this->parent = n3n;
+}
+
+template<class T,class C>
+magi::N3node<T, C>::N3node() {
+    this->status = 2;
+}
+
+template<class T,class C>
+void magi::N3node<T,C>::setNext(magi::N3node<T, C>* n3n, const char &pos) {
+    this->next[pos + 1] = n3n;
 }
 
 template<class T, class C>
-void magi::N3node<T, C>::setup() {
-	this->status = 0;
-	this->relations.resize(4);
+void magi::N3node<T, C>::setNext(const std::vector<magi::N3node<T, C>*>& vec){
+    this->next = vec;
+}
+
+template<class T,class C>
+char magi::N3node<T, C>::getDirection() const{
+    unsigned char res = 3;
+    res &= this->status;
+    switch (res) {
+    case 0: return 0;
+    case 1: return 1;
+    case 3: return -1;
+    }
+}
+
+template<class T, class C>
+typename std::map<T, magi::N3node<T, C>*>::iterator *& magi::N3node<T, C>::getIt(){
+    return this->target;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::resetDirection() {
-	this->status &= 252;
-}
-
-template<class T, class C>
-char magi::N3node<T, C>::getDirection() {
-	unsigned char tmp = 3;
-	tmp &= this->status;
-	if (tmp == 3)
-		return (-1);
-	return tmp;
+    this->status &= 252;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setDirection(const char &c) {
-	if (c< (-1) || c >1)
-		throw std::exception();
-	this->resetDirection();
-	if (c == (-1))
-		this->status |= 3;
-	else
-		this->status |= c;
-}
-
-template<class T, class C>
-bool magi::N3node<T, C>::isMid() {
-	unsigned char tmp = 4;
-	tmp &= this->status;
-	return (tmp != 0);
-}
-
-template<class T, class C>
-bool magi::N3node<T, C>::isEnd() {
-	return (!this->isMid());
+    this->resetDirection();
+    if (c == (-1))
+        this->status |= 3;
+    else
+        this->status |= c;
 }
 
 #endif // N3NODE_H
