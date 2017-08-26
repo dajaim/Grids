@@ -12,14 +12,14 @@
 
 namespace magi {
 
-    // v 1.0 ( seems to work)
+    // v 1.2 ( seems to work)
 
     // N3tree is a dynamic grid, which is expandable to n ( n > 0) dimensions.
     // It is probably the best option if you work with few widely separated coordinates.
     // It is probably the worst option if you work with many closely aligned coordinates.
 
     // T is the type of the object, which you insert
-    // C is the type of the coordinates, default is int
+    // C is the type of the coordinates, default is int, floating-point numbers are not supported
     template<class T, class C = int>
     class N3tree;
 }
@@ -30,15 +30,15 @@ class magi::N3tree : public magi::Grid<T, C> {
 public:
     N3tree() { this->setup(); }
     ~N3tree() { this->clear(); delete this->entry; }
-    bool available(const T & obj);
-    int add(const std::vector<C>& position, const T & obj);
-    bool del(const T & obj);
     void clear();
+    bool available(const T & obj);
+    bool del(const T & obj);
+    bool ipo(const std::vector<C>& vec);
+    int add(const std::vector<C>& position, const T & obj);
     unsigned getDimension() { return this->dimension; }
     unsigned setDimension(const unsigned & dimension);
     std::vector<C> where(const T & obj);
     std::vector<std::vector<char > >appPos(const std::vector<C> & vector);
-    bool ipo(const std::vector<C>& vec);
 private:
     // doc
     int scalar, dimension;
@@ -46,8 +46,10 @@ private:
     magi::N3node<T, C> * entry;
     // 3^x, x > (-1)
     std::map<C, std::size_t >approx;
-    //magi::N3node<T,C> * currentPosition; <- optimization
+    //magi::N3node<T,C> * currentPosition; <- optimization for CG
     std::map<T, magi::N3node<T, C> * >reference;
+
+
     void setup();
     void base3ApproxSetup();
     void shrinkVec(std::vector<std::vector<char>> & vec);
@@ -80,8 +82,9 @@ void magi::N3tree<T, C>::push0End(std::vector<std::vector<char>> & vec) {
 
 template<class T, class C>
 void magi::N3tree<T, C>::shrink() {
-    magi::N3node<T, C>* node, *run;
+    magi::N3node<T, C>* node, *tmp, *run;
     std::vector<char>nullStage(this->dimension);
+    bool oneWay = true, stageBreak = false;
 
     node = this->entry;
     while (true) {
@@ -410,10 +413,9 @@ int magi::N3tree<T, C>::add(const std::vector<C>& position, const T & obj) {
     magi::N3node<T, C>* node;
     typename std::map<T, magi::N3node<T, C>*>::iterator* pit;
 
-    //check, obj available
     if (this->available(obj))
         return 2;
-    //if this->dimension == 0
+
     if (this->dimension == 0) {
         if (position.size() > 0)
             this->dimension = position.size();

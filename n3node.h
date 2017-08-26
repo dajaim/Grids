@@ -1,3 +1,5 @@
+// author: Daniel Jan Imiela
+
 #include<map>
 #include<vector>
 
@@ -6,7 +8,9 @@
 
 namespace magi {
 
-    template<class T, class C = int>
+    // v 1.2 ( seems to work)
+
+    template<class T, class C>
     class N3node;
     template<class T, class C>
     class N3tree;
@@ -14,8 +18,7 @@ namespace magi {
 
 template<class T, class C>
 class magi::N3node {
-public:
-    friend magi::N3tree<T, C>;
+    friend class magi::N3tree<T, C>;
     N3node();
     ~N3node();
     void setDirection(const char & c);
@@ -37,30 +40,32 @@ public:
     * XXXXXX11 = -1 \
     * XXXXXX00 = 0 - direction in relation to parent
     * XXXXXX01 = 1 /
-    * XXXXXX10 = no direction is set, throws exception if this->getDirection() is called
-    * XXXXX0XX = end-bit, 0 = isNext, 1 = isEnd default is 0
+    * XXXXXX10 = no direction, will return nothing in request but has to return char => error
+    * XXXXX0XX = end-bit, 0 = isNext, 1 = isEnd default is 0, guess it is unnecessary
     * 5 bits free !!!
     */
     magi::N3node<T, C>*parent;
     unsigned char status;
     typename std::map<T, magi::N3node<T, C>*>::iterator * target;
-    std::vector<magi::N3node<T, C>*>next;
+    std::vector<magi::N3node<T, C>*> * next;
 };
 
 template<class T,class C>
 magi::N3node<T,C>::~N3node() {
     if (this->target != NULL)
         delete this->target;
+    if (this->next != NULL)
+        delete this->next;
 }
 
 template<class T,class C>
 magi::N3node<T, C>*& magi::N3node<T, C>::getNext(const char & c) {
-    return this->next[c + 1];
+    return this->next->operator[](c + 1);
 }
 
 template<class T,class C>
 std::vector<magi::N3node<T, C>*>& magi::N3node<T, C>::getNext() {
-    return this->next;
+    return (*this->next);
 }
 
 template<class T,class C>
@@ -71,7 +76,8 @@ void magi::N3node<T, C>::setEnd() {
 template<class T,class C>
 void magi::N3node<T, C>::setMid() {
     this->status &= 251;
-    this->next.resize(3);
+    this->next = new std::vector<magi::N3node<T, C>*>;
+    this->next->resize(3);
 }
 
 template<class T, class C>
@@ -86,12 +92,12 @@ magi::N3node<T, C>*& magi::N3node<T, C>::getPar() {
 
 template<class T,class C>
 bool magi::N3node<T, C>::isMid()const {
-    return (this->next.size() != 0);
+    return (this->next != NULL);
 }
 
 template<class T,class C>
 bool magi::N3node<T, C>::isTarget()const {
-    return (this->next.size() == 0);
+    return (this->next == NULL);
 }
 
 template<class T,class C>
@@ -101,17 +107,19 @@ void magi::N3node<T, C>::setPar(magi::N3node<T, C>* n3n) {
 
 template<class T,class C>
 magi::N3node<T, C>::N3node() {
+    this->next = NULL;
+    this->target = NULL;
     this->status = 2;
 }
 
 template<class T,class C>
 void magi::N3node<T,C>::setNext(magi::N3node<T, C>* n3n, const char &pos) {
-    this->next[pos + 1] = n3n;
+    this->next->operator[](pos + 1) = n3n;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setNext(const std::vector<magi::N3node<T, C>*>& vec){
-    this->next = vec;
+    (*this->next) = vec;
 }
 
 template<class T,class C>
