@@ -12,7 +12,7 @@
 
 namespace magi {
 
-	// v 1.2 ( seems to work)
+	// v 1.21 ( seems to work)
 
 	// N3tree is a dynamic grid, which is expandable to n ( n > 0) dimensions.
 	// It is probably the best option if you work with few widely separated coordinates.
