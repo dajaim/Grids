@@ -3,6 +3,9 @@
 #ifndef GRID
 #define GRID
 namespace magi {
+
+	// v 1.3 ( seems to work)
+
 	template<class T, class C = int>
 	class Grid;
 }

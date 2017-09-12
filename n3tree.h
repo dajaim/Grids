@@ -12,7 +12,7 @@
 
 namespace magi {
 
-	// v 1.21 ( seems to work)
+	// v 1.3 ( seems to work)
 
 	// N3tree is a dynamic grid, which is expandable to n ( n > 0) dimensions.
 	// It is probably the best option if you work with few widely separated coordinates.
@@ -29,14 +29,14 @@ template<class T, class C>
 class magi::N3tree : public magi::Grid<T, C> {
 	friend class N3test;
 public:
-	N3tree() { this->setup(); }
-	~N3tree() { this->clr(); delete this->entry; }
+	N3tree();
+	~N3tree();
 	void clr();
 	bool ava(const T & obj);
 	bool del(const T & obj);
 	bool ipo(const std::vector<C>& position);
 	int add(const std::vector<C>& position, const T & obj);
-	unsigned getDim() { return this->dimension; }
+	unsigned getDim()const ;
 	unsigned setDim(const unsigned & dimension);
 	std::vector<C> whr(const T & obj);
 private:
@@ -49,7 +49,6 @@ private:
 	//magi::N3node<T,C> * currentPosition; <- optimization for CG
 	std::map<T, magi::N3node<T, C> * >reference;
 
-
 	void setup();
 	void approxSetup();
 	void shrinkVec(std::vector<std::vector<char>> & vec);
@@ -57,7 +56,7 @@ private:
 	void shrink();
 	magi::N3node<T, C>* link(const std::vector<std::vector<char> > & mat);
 	magi::N3node<T, C>* merge(const std::vector<std::vector<char> > & mat);
-	bool legalVec(const std::vector<C> & vec) { return (vec.size() == this->dimension); }
+	bool legalVec(const std::vector<C> & vec);
 	bool zeroVecCheck(const std::vector<char> & vec);
 	bool posOcc(const std::vector<std::vector<char> > & mat);
 	std::vector<char> appLoop(const C & app, const unsigned & c);
@@ -67,13 +66,41 @@ private:
 	std::vector<std::vector<char> >translate(const std::vector<std::vector<char> >& vec);
 	C convertCharVec(const std::vector<char>& cvec);
 	C abs(const C & c) { return c < 0 ? ((-1)* c) : c; }
-	C byx3(unsigned exp) { C res = 1; for (unsigned i = 0; i < exp; ++i) res *= 3; return res; }
+	C byx3(unsigned &exp);
 	magi::N3node<T, C>* firstEntry(const std::vector<std::vector<char> >& vec);
 	magi::N3node<T, C>* getNode(const std::vector<std::vector<char > > & vec);
 	magi::N3node<T, C>* getN3Node(const std::vector<char> & vec);
 	magi::N3node<T, C>* simpleEntry(const std::vector<std::vector<char> > & vec);
 	magi::N3node<T, C>* getStage(const std::vector<char> & vec, const std::size_t & index = 0);
 };
+
+template<class T,class C>
+C magi::N3tree<T,C>::byx3(unsigned &exp) { 
+	C res = 1;
+	for (unsigned i = 0; i < exp; ++i) 
+		res *= 3; 
+	return res; 
+}
+
+template<class T,class C>
+bool magi::N3tree<T,C>::legalVec(const std::vector<C> & vec) { 
+	return (vec.size() == this->dimension); 
+}
+
+template<class T, class C>
+unsigned magi::N3tree<T,C>::getDim()const { 
+	return this->dimension; 
+}
+
+template<class T, class C>
+magi::N3tree<T, C>::~N3tree() {
+	this->clr(); delete this->entry;
+}
+
+template<class T, class C>
+magi::N3tree<T, C>::N3tree() {
+	this->setup();
+}
 
 template<class T, class C>
 void magi::N3tree<T, C>::push0End(std::vector<std::vector<char>> & vec) {
@@ -275,8 +302,8 @@ magi::N3node<T, C>* magi::N3tree<T, C>::getN3Node(const std::vector<char> & vec)
 }
 
 template<class T, class C>
-magi::N3node<T, C>* magi::N3tree<T, C>::firstEntry(const std::vector<std::vector<char>>& vec){
-	magi::N3node<T, C>* last, *stage, * tmp;
+magi::N3node<T, C>* magi::N3tree<T, C>::firstEntry(const std::vector<std::vector<char>>& vec) {
+	magi::N3node<T, C>* last, *stage, *tmp;
 	auto revIt = vec.rbegin();
 
 	last = this->entry;
@@ -456,8 +483,8 @@ int magi::N3tree<T, C>::add(const std::vector<C>& position, const T & obj) {
 	node->setEnd();
 	this->reference[obj] = node;
 	pit = new typename std::map<T, magi::N3node<T, C>*>::iterator;
-	node->setTarget(pit);
 	(*pit) = this->reference.find(obj);
+	node->setTarget(pit);
 	return 0;
 }
 
@@ -555,9 +582,11 @@ void magi::N3tree<T, C>::clr() {
 	queue.push(this->entry);
 	while (!queue.empty()) {
 		node = queue.front();
-		for (magi::N3node<T, C>*& elem : node->getNext())
-			if (elem != NULL)
-				queue.push(elem);
+		if (node->isMid()) {
+			for (magi::N3node<T, C>*& elem : node->getNext())
+				if (elem != NULL)
+					queue.push(elem);
+		}
 		delete node;
 		queue.pop();
 	}

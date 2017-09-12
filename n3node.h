@@ -8,7 +8,7 @@
 
 namespace magi {
 
-	// v 1.2 ( seems to work)
+	// v 1.3 ( seems to work)
 
 	template<class T, class C>
 	class N3node;
@@ -27,77 +27,102 @@ class magi::N3node {
 	void setPar(magi::N3node<T, C> *  n3n);
 	void setEnd();
 	void setMid();
+	void setEoN();
 	void setTarget(typename std::map<T, magi::N3node<T, C>*>::iterator* it);
 	void resetDirection();
+	bool isEoN()const;
 	bool isMid()const;
 	bool isTarget()const;
 	char getDirection()const;
 	std::vector<magi::N3node<T, C>*>&getNext();
-	magi::N3node<T, C>*& getNext(const char & c);
+	magi::N3node<T, C>* &getNext(const char & c);
 	typename std::map<T, magi::N3node<T, C>*>::iterator*& getIt();
-	magi::N3node<T, C>* & getPar();
+	magi::N3node<T, C>* &getPar();
+
+	// parent
+	magi::N3node<T, C>*parent;
+	// std::vector<magi::N3node<T,C>*>* XOR typename std::map<T,magi::N3node<T,C>*>*
+	void * data;
 	/*
 	* XXXXXX11 = -1 \
-	* XXXXXX00 = 0 - direction in relation to parent
-	* XXXXXX01 = 1 /
+	* XXXXXX00 = 0  - direction in relation to parent
+	* XXXXXX01 = 1  /
 	* XXXXXX10 = no direction, will return nothing in request but has to return char => error
-	* XXXXX0XX = end-bit, 0 = isNext, 1 = isEnd default is 0, guess it is unnecessary
+	* XXXXX0XX = end-bit, 0 = isNext, 1 = isEnd
 	* 5 bits free !!!
 	*/
-	magi::N3node<T, C>*parent;
 	unsigned char status;
-	typename std::map<T, magi::N3node<T, C>*>::iterator * target;
-	std::vector<magi::N3node<T, C>*> * next;
 };
+
+template<class T,class C>
+void magi::N3node<T, C>::setEoN() {
+	this->status |= 8;
+}
+
+template<class T, class C>
+bool magi::N3node<T, C>::isEoN()const {
+	unsigned char res = 8;
+	res &= this->status;
+	return (res == 0);
+}
 
 template<class T, class C>
 magi::N3node<T, C>::~N3node() {
-	if (this->target != NULL)
-		delete this->target;
-	if (this->next != NULL)
-		delete this->next;
+	if (this->data == NULL)
+		return;
+	if (this->isMid())
+		delete (std::vector<magi::N3node<T, C>*>*)this->data;
+	else
+		delete (typename std::map<T, magi::N3node<T, C>*>::iterator*)this->data;
 }
 
 template<class T, class C>
 magi::N3node<T, C>*& magi::N3node<T, C>::getNext(const char & c) {
-	return this->next->operator[](c + 1);
+	std::vector<magi::N3node<T, C>*> & ref = (*(std::vector<magi::N3node<T, C>*>*)this->data);
+	return ref[c + 1];
 }
 
 template<class T, class C>
 std::vector<magi::N3node<T, C>*>& magi::N3node<T, C>::getNext() {
-	return (*this->next);
+	return (*(std::vector<magi::N3node<T, C>*>*)this->data);
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setEnd() {
+	if (this->isMid())
+		delete (std::vector<magi::N3node<T, C>*>*)this->data;
 	this->status |= 4;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setMid() {
 	this->status &= 251;
-	this->next = new std::vector<magi::N3node<T, C>*>;
-	this->next->resize(3);
+	this->data = new std::vector<magi::N3node<T, C>*>(3);
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setTarget(typename std::map<T, magi::N3node<T, C>*>::iterator * it) {
-	this->target = it;
+	this->setEoN();
+	this->data = (typename std::map<T, magi::N3node<T, C>*>::iterator *)it;
 }
 
 template<class T, class C>
-magi::N3node<T, C>*& magi::N3node<T, C>::getPar() {
+magi::N3node<T, C>* &magi::N3node<T, C>::getPar() {
 	return this->parent;
 }
 
 template<class T, class C>
-bool magi::N3node<T, C>::isMid()const {
-	return (this->target == NULL);
+bool magi::N3node<T, C>::isMid() const{
+	unsigned char res = 4;
+	res &= this->status;
+	return (res == 0);
 }
 
 template<class T, class C>
 bool magi::N3node<T, C>::isTarget()const {
-	return (this->target != NULL);
+	unsigned char res = 4;
+	res &= this->status;
+	return (res == 4);
 }
 
 template<class T, class C>
@@ -107,19 +132,19 @@ void magi::N3node<T, C>::setPar(magi::N3node<T, C>* n3n) {
 
 template<class T, class C>
 magi::N3node<T, C>::N3node() {
-	this->next = NULL;
-	this->target = NULL;
 	this->status = 2;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setNext(magi::N3node<T, C>* n3n, const char &pos) {
-	this->next->operator[](pos + 1) = n3n;
+	std::vector<magi::N3node<T, C>*> & ref = (*(std::vector<magi::N3node<T, C>*>*) this->data);
+	ref[pos + 1] = n3n;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setNext(const std::vector<magi::N3node<T, C>*>& vec) {
-	(*this->next) = vec;
+	std::vector<magi::N3node<T, C>*> & ref = (*(std::vector<magi::N3node<T, C>*>*)this->data);
+	ref = vec;
 }
 
 template<class T, class C>
@@ -135,7 +160,7 @@ char magi::N3node<T, C>::getDirection() const {
 
 template<class T, class C>
 typename std::map<T, magi::N3node<T, C>*>::iterator *& magi::N3node<T, C>::getIt() {
-	return this->target;
+	return (typename std::map<T, magi::N3node<T, C>*>::iterator *)this->data;
 }
 
 template<class T, class C>
