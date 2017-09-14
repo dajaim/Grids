@@ -27,12 +27,10 @@ class magi::N3node {
 	void setPar(magi::N3node<T, C> *  n3n);
 	void setEnd();
 	void setMid();
-	void setEoN();
 	void setTarget(typename std::map<T, magi::N3node<T, C>*>::iterator* it);
 	void resetDirection();
-	bool isEoN()const;
 	bool isMid()const;
-	bool isTarget()const;
+	bool isEnd()const;
 	char getDirection()const;
 	std::vector<magi::N3node<T, C>*>&getNext();
 	magi::N3node<T, C>* &getNext(const char & c);
@@ -54,25 +52,13 @@ class magi::N3node {
 	unsigned char status;
 };
 
-template<class T,class C>
-void magi::N3node<T, C>::setEoN() {
-	this->status |= 8;
-}
-
-template<class T, class C>
-bool magi::N3node<T, C>::isEoN()const {
-	unsigned char res = 8;
-	res &= this->status;
-	return (res == 0);
-}
-
 template<class T, class C>
 magi::N3node<T, C>::~N3node() {
-	if (this->data == NULL)
-		return;
-	if (this->isMid())
+	if (this->isMid() && this->data != NULL) {
 		delete (std::vector<magi::N3node<T, C>*>*)this->data;
-	else
+		return;
+	}
+	if(this->isEnd() && this->data != NULL)
 		delete (typename std::map<T, magi::N3node<T, C>*>::iterator*)this->data;
 }
 
@@ -89,25 +75,27 @@ std::vector<magi::N3node<T, C>*>& magi::N3node<T, C>::getNext() {
 
 template<class T, class C>
 void magi::N3node<T, C>::setEnd() {
-	if (this->isMid())
+
+	if (this->isMid() && this->data != NULL)
 		delete (std::vector<magi::N3node<T, C>*>*)this->data;
 	this->status |= 4;
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setMid() {
+	if (this->isMid())
+		return;
 	this->status &= 251;
 	this->data = new std::vector<magi::N3node<T, C>*>(3);
 }
 
 template<class T, class C>
 void magi::N3node<T, C>::setTarget(typename std::map<T, magi::N3node<T, C>*>::iterator * it) {
-	this->setEoN();
 	this->data = (typename std::map<T, magi::N3node<T, C>*>::iterator *)it;
 }
 
 template<class T, class C>
-magi::N3node<T, C>* &magi::N3node<T, C>::getPar() {
+magi::N3node<T, C>* & magi::N3node<T, C>::getPar() {
 	return this->parent;
 }
 
@@ -115,11 +103,11 @@ template<class T, class C>
 bool magi::N3node<T, C>::isMid() const{
 	unsigned char res = 4;
 	res &= this->status;
-	return (res == 0);
+	return ((res == 0) && (this->data != NULL));
 }
 
 template<class T, class C>
-bool magi::N3node<T, C>::isTarget()const {
+bool magi::N3node<T, C>::isEnd()const {
 	unsigned char res = 4;
 	res &= this->status;
 	return (res == 4);
